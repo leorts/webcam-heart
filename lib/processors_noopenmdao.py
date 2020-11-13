@@ -184,7 +184,8 @@ class findFaceGetPulse(object):
         self.samples = processed
         if L > 10:
             self.output_dim = processed.shape[0]
-
+            
+            # Calculate absolute FT and phase of buffer
             self.fps = float(L) / (self.times[-1] - self.times[0])
             even_times = np.linspace(self.times[0], self.times[-1], L)
             interpolated = np.interp(even_times, self.times, processed)
@@ -195,12 +196,14 @@ class findFaceGetPulse(object):
             self.fft = np.abs(raw)
             self.freqs = float(self.fps) / L * np.arange(L / 2 + 1)
 
+            # Pay attention to frequencies only in feasible heart rate range
             freqs = 60. * self.freqs
             idx = np.where((freqs > 50) & (freqs < 180))
 
             pruned = self.fft[idx]
             phase = phase[idx]
 
+            # Select highest frequency as heart rate
             pfreq = freqs[idx]
             self.freqs = pfreq
             self.fft = pruned
@@ -214,6 +217,7 @@ class findFaceGetPulse(object):
             self.bpm = self.freqs[idx2]
             self.idx += 1
 
+            # Change forehead box color
             x, y, w, h = self.get_subface_coord(0.5, 0.18, 0.25, 0.15)
             r = alpha * self.frame_in[y:y + h, x:x + w, 0]
             g = alpha * \
