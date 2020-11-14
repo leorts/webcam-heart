@@ -93,6 +93,7 @@ while (True):
 
     detectionFrame = frame[videoHeight//2:realHeight-videoHeight//2, videoWidth//2:realWidth-videoWidth//2, :]
 
+
     # Construct Gaussian Pyramid
     videoGauss[bufferIndex] = buildGauss(detectionFrame, levels+1)[levels]
     fourierTransform = np.fft.fft(videoGauss, axis=0)
@@ -116,7 +117,7 @@ while (True):
 
     # Reconstruct Resulting Frame
     filteredFrame = reconstructFrame(filtered, bufferIndex, levels)
-    outputFrame = detectionFrame + filteredFrame
+    outputFrame = detectionFrame + filteredFrame/2
     outputFrame = cv2.convertScaleAbs(outputFrame)
 
     bufferIndex = (bufferIndex + 1) % bufferSize

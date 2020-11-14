@@ -5,8 +5,6 @@ from cv2 import moveWindow
 import argparse
 import numpy as np
 import datetime
-#TODO: work on serial port comms, if anyone asks for it
-#from serial import Serial
 import socket
 import sys
 
@@ -15,14 +13,12 @@ class getPulseApp(object):
     """
     Python application that finds a face in a webcam stream, then isolates the
     forehead.
-
     Then the average green-light intensity in the forehead region is gathered
     over time, and the detected person's pulse is estimated.
     """
 
     def __init__(self, args):
-        # Imaging device - must be a connected camera (not an ip camera or mjpeg
-        # stream)
+        # Imaging device - must be a connected camera (not an ip camera or mjpeg stream)
         serial = args.serial
         baud = args.baud
         self.send_serial = False
@@ -103,11 +99,9 @@ class getPulseApp(object):
     def toggle_search(self):
         """
         Toggles a motion lock on the processor's face detection component.
-
         Locking the forehead location in place significantly improves
         data quality, once a forehead has been sucessfully isolated.
         """
-        #state = self.processor.find_faces.toggle()
         state = self.processor.find_faces_toggle()
         print("face detection lock =", not state)
 
@@ -146,7 +140,6 @@ class getPulseApp(object):
     def key_handler(self):
         """
         Handle keystrokes, as set at the bottom of __init__()
-
         A plotting or camera frame window must have focus for keypresses to be
         detected.
         """
@@ -171,9 +164,6 @@ class getPulseApp(object):
         # Get current image frame from the camera
         frame = self.cameras[self.selected_cam].get_frame()
         self.h, self.w, _c = frame.shape
-
-        # display unaltered frame
-        # imshow("Original",frame)
 
         # set current image frame to the processor's input
         self.processor.frame_in = frame
