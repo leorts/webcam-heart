@@ -48,11 +48,9 @@ class findFaceGetPulse(object):
         self.output_dim = 13
         self.find_faces = True 
 
-
         self.method = 0
 
         # for gaussian pyramid
-        
         self.levels = 3
 
     def method_toggle(self):
@@ -116,31 +114,6 @@ class findFaceGetPulse(object):
         _, _, w, h = self.get_subface_coord(*(self.forehead_coords))
         filtered_subframe = filtered_subframe[:h, :w]
         return filtered_subframe    
-
-    def plot(self):
-        data = np.array(self.mean_buffer).T
-        np.savetxt("data.dat", data)
-        np.savetxt("times.dat", self.times)
-        freqs = 60. * self.freqs
-        idx = np.where((freqs > 50) & (freqs < 180))
-        pylab.figure()
-        n = data.shape[0]
-        for k in xrange(n):
-            pylab.subplot(n, 1, k + 1)
-            pylab.plot(self.times, data[k])
-        pylab.savefig("data.png")
-        pylab.figure()
-        for k in xrange(self.output_dim):
-            pylab.subplot(self.output_dim, 1, k + 1)
-            pylab.plot(self.times, self.pcadata[k])
-        pylab.savefig("data_pca.png")
-
-        pylab.figure()
-        for k in xrange(self.output_dim):
-            pylab.subplot(self.output_dim, 1, k + 1)
-            pylab.plot(freqs[idx], self.fft[k][idx])
-        pylab.savefig("data_fft.png")
-        quit()
 
     def run(self, cam):
         self.times.append(time.time() - self.t0)
@@ -259,7 +232,7 @@ class findFaceGetPulse(object):
                 frame_out = cv2.merge([r,g,b])
 
             else:
-                fs = 60 # self.fps
+                fs = 60 
                 sos = signal.butter(3, (1, 3.0), 'bp', fs=60, output='sos')
                 filtered = signal.sosfilt(sos, subframes, axis=0)
                 alpha = 80
