@@ -30,7 +30,7 @@ class findFaceGetPulse(object):
         self.fps = 0
         self.buffer_size = 250
         self.mean_buffer = []
-        self.subframe_buffer = []
+        self.g_pyr_buffer = []
         self.times = []
         self.t0 = time.time()
         self.samples = []
@@ -45,29 +45,9 @@ class findFaceGetPulse(object):
         self.face_rect = [1, 1, 2, 2]
         self.forehead_coords = (0.5, 0.17, 0.30, 0.18) # (right, down, wide, tall)
         self.last_center = np.array([0, 0])
-        self.output_dim = 13
         self.find_faces = True 
 
-        self.method = 0
-
-        # for gaussian pyramid
-        self.levels = 3
-
-    def method_toggle(self):
-        if self.method == 0:
-            self.method = 1
-            method = "Eulerian"
-        else: 
-            self.method = 0
-            method = "Naive"
-        return method
-
-    def get_method(self):
-        if self.method == 0:
-            method = "Naive"
-        else: 
-            method = "Eulerian"
-        return method
+        self.used_color_ch = 0 # default color channel used is g
 
     def find_faces_toggle(self):
         self.find_faces = not self.find_faces
@@ -91,29 +71,106 @@ class findFaceGetPulse(object):
                 int(w * fh_w),
                 int(h * fh_h)]
 
-    def get_subface_vals(self, coord):
-        x, y, w, h = coord
-        subframe = self.frame_in[y:y + h, x:x + w, :]
-        v1 = np.mean(subframe[:, :, 0])
-        v2 = np.mean(subframe[:, :, 1])
-        v3 = np.mean(subframe[:, :, 2])
-        filtered_subframe = self.buildGpyr(subframe, self.levels+1)[self.levels]
-        return filtered_subframe, (v1 + v2 + v3) / 3.
+    def color_ch_toggle(self):
+        if self.used_color_ch == 0:
+            self.used_color_ch = 1
+            used_color_ch = "r"
+        elif self.used_color_ch == 1:
+            self.used_color_ch = 2
+            used_color_ch = "b"
+        elif self.used_color_ch == 2:
+            self.used_color_ch = 3
+            used_color_ch = "rgb"  
+        else: # used_color_ch == 3
+            self.used_color_ch = 0
+            used_color_ch = "g"     
+        return used_color_ch
 
-    # Helper Methods for gaussian pyramids
-    def buildGpyr(self, subframe, levels):
+    def get_color_ch(self):
+        if self.used_color_ch == 0:
+            used_color_ch = "g"
+        elif self.used_color_ch == 1:
+            used_color_ch = "r"
+        elif self.used_color_ch == 2:
+            used_color_ch = "b"
+        else: # used_color_ch == 3
+            used_color_ch = "rgb"    
+        return used_color_ch
+
+    #-------------------------------------------------------------#     
+    # BPM AND EULERIAN MAGNIFICATION METHODS
+    #-------------------------------------------------------------#  
+    
+    # Helper Methods for get_bpm()
+    def extract_color(self, frame):
+        if self.used_color_ch == 0: # g
+            return np.mean(frame[:,:,1])
+        elif self.used_color_ch == 1: # r  
+            return np.mean(frame[:,:,0])
+        elif self.used_color_ch == 2: # b
+            return np.mean(frame[:,:,2])
+        else: # rgb
+            return np.mean(frame)
+
+    def get_bpm(self, L):
+        # Interpolate raw data
+        even_times = np.linspace(self.times[0], self.times[-1], L)
+        self.samples = signal.detrend(self.samples) # Detrend mitigates light change interference 
+        interpolated = np.interp(even_times, self.times, self.samples)
+        interpolated = np.hamming(L) * interpolated
+        interpolated = interpolated - np.mean(interpolated)
+
+        # Calculate absolute FT of buffer
+        raw = np.fft.rfft(interpolated)
+        self.fft = np.abs(raw)
+
+        # Pay attention to frequencies only in feasible heart rate range
+        self.freqs = float(self.fps) / L * np.arange(L / 2 + 1)
+        freqs = 60. * self.freqs
+        idx = np.where((freqs > 50) & (freqs < 180))
+
+        # Select highest frequency as heart rate
+        self.freqs = freqs[idx]
+        self.fft = self.fft[idx]
+        idx2 = np.argmax(self.fft)
+
+        return self.freqs[idx2]
+
+    # Helper Methods for eulerian_magnify()
+    def build_g_pyr(self, subframe, levels=3):
         pyr = [subframe]
         for level in range(levels):
             subframe = cv2.pyrDown(subframe)
             pyr.append(subframe)
         return pyr
-    def rebuildSubframe(self, pyr, levels):
-        filtered_subframe = pyr[-1]
+
+    def temporal_ideal_filter(self, pyr_vid):
+        fft = np.fft.fft(pyr_vid, axis=0)
+        freqs = np.fft.fftfreq(pyr_vid.shape[0], d=(1.0 / self.fps)) * 60
+        idx_low = (np.abs(freqs - 50)).argmin()
+        idx_high = (np.abs(freqs - 180)).argmin()
+        fft[:idx_low ] = 0
+        fft[idx_high:-idx_high] = 0
+        fft[-idx_low:] = 0
+        return np.abs(np.fft.ifft(fft, axis=0))
+
+    def rebuild_subframe(self, pyr, levels=3):
         for level in range(levels):
-            filtered_subframe = cv2.pyrUp(filtered_subframe)
+            pyr = cv2.pyrUp(pyr)
         _, _, w, h = self.get_subface_coord(*(self.forehead_coords))
-        filtered_subframe = filtered_subframe[:h, :w]
-        return filtered_subframe    
+        subframe = pyr[:h, :w] # Account for possible pyrDown and pyrUp rounding
+        return subframe    
+
+    def eulerian_magnify(self, pyr_vid, amplification=50):
+        t_filt_pyr_vid = self.temporal_ideal_filter(pyr_vid)  
+        t_filt_pyr = t_filt_pyr_vid[-1] # Take last frame of filtered video
+        t_filt_pyr = t_filt_pyr * amplification
+        subframe_out = self.rebuild_subframe(t_filt_pyr)
+        return subframe_out
+
+    #-------------------------------------------------------------#      
+    # MAIN LOOP
+    #-------------------------------------------------------------#    
 
     def run(self, cam):
         self.times.append(time.time() - self.t0)
@@ -128,11 +185,11 @@ class findFaceGetPulse(object):
                 self.frame_out, "Press 'S' to lock face and begin",
                        (10, 50), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.25, col)
             cv2.putText(
-                self.frame_out, "Press 'X' to change signal processing method (current: %s)" % self.get_method(),
+                self.frame_out, "Press 'X' to change used color channel(s) (current: %s)" % self.get_color_ch(),
                         (10, 75), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.25, col)
             cv2.putText(self.frame_out, "Press 'Esc' to quit",
                        (10, 100), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.25, col)
-            self.mean_buffer, self.subframe_buffer, self.times = [], [], []
+            self.mean_buffer, self.g_pyr_buffer, self.times = [], [], []
             detected = list(self.face_cascade.detectMultiScale(self.gray,
                                                                scaleFactor=1.3,
                                                                minNeighbors=4,
@@ -164,7 +221,7 @@ class findFaceGetPulse(object):
             (10, 25), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.25, col)
         cv2.putText(self.frame_out, "Press 'S' to restart",
                    (10, 50), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.5, col)
-        cv2.putText(self.frame_out, "Press 'X' to change signal processing method (current: %s)" % self.get_method(),
+        cv2.putText(self.frame_out, "Press 'X' to change used color channel(s) (current: %s)" % self.get_color_ch(),
                    (10, 75), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.25, col)           
         cv2.putText(self.frame_out, "Press 'D' to toggle data plot",
                    (10, 100), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.5, col)
@@ -174,77 +231,36 @@ class findFaceGetPulse(object):
         forehead1 = self.get_subface_coord(*(self.forehead_coords))
         self.draw_rect(forehead1)
 
-        # Grab subframe and subframe's average values 
-        subframe, mean = self.get_subface_vals(forehead1)
+        x, y, w, h = self.get_subface_coord(*(self.forehead_coords))
+        subframe = self.frame_in[y:y + h, x:x + w, :]
 
-        self.mean_buffer.append(mean)
-        self.subframe_buffer.append(subframe)
-        L = len(self.mean_buffer)
+        mean = self.extract_color(subframe)
+        #g1 = self.extract_color(ROI1)
+        #g2 = self.extract_color(ROI2)
+        #g3 = self.extractColor(ROI3)
+        
+        #calculate average green value of subframes
+        #g = (g1+g2)/2
+
+        g_pyr = self.build_g_pyr(subframe)
+
+        self.mean_buffer.append(mean) # for bpm
+        self.g_pyr_buffer.append(g_pyr[-1]) # for eulerian magnify
+        L = len(self.g_pyr_buffer)
         if L > self.buffer_size:
-            self.mean_buffer = self.mean_buffer[-self.buffer_size:]
-            self.subframe_buffer = self.subframe_buffer[-self.buffer_size:]
             self.times = self.times[-self.buffer_size:]
+            self.mean_buffer = self.mean_buffer[-self.buffer_size:]
+            self.g_pyr_buffer = self.g_pyr_buffer[-self.buffer_size:]
             L = self.buffer_size
 
         self.samples = np.array(self.mean_buffer)
-        subframes = np.array(self.subframe_buffer, copy = True)
-        if L > 10:
-            self.output_dim = self.samples.shape[0]
-            
+        pyr_vid = np.array(self.g_pyr_buffer, copy = True)
+        if L > 50: 
             self.fps = float(L) / (self.times[-1] - self.times[0])
-            self.freqs = float(self.fps) / L * np.arange(L / 2 + 1)
+            self.bpm = self.get_bpm(L)
+            magnified_subframe = self.eulerian_magnify(pyr_vid)
+            self.frame_out[y:y + h, x:x + w] = self.frame_in[y:y + h, x:x + w, :] + magnified_subframe
 
-            # if method == 0:
-            # Interpolate raw data
-            even_times = np.linspace(self.times[0], self.times[-1], L)
-            interpolated = np.interp(even_times, self.times, self.samples)
-            interpolated = np.hamming(L) * interpolated
-            interpolated = interpolated - np.mean(interpolated)
-
-            # Calculate absolute FT and phase of buffer
-            raw = np.fft.rfft(interpolated)
-            phase = np.angle(raw)
-            self.fft = np.abs(raw)
-
-            # Pay attention to frequencies only in feasible heart rate range
-            freqs = 60. * self.freqs
-            idx = np.where((freqs > 50) & (freqs < 180))
-
-            # Select highest frequency as heart rate
-            self.freqs = freqs[idx]
-            phase = phase[idx]
-            self.fft = self.fft[idx]
-            idx2 = np.argmax(self.fft)
-
-            self.bpm = self.freqs[idx2]
-
-            if self.method == 0:
-                # Calculate new forehead box frame
-                t = (np.sin(phase[idx2]) + 1.) / 2.
-                t = 0.9 * t + 0.1
-                alpha = t
-                beta = 1 - t
-                x, y, w, h = self.get_subface_coord(*(self.forehead_coords))
-                r = alpha * self.frame_in[y:y + h, x:x + w, 0]
-                g = alpha * self.frame_in[y:y + h, x:x + w, 1] + \
-                    beta * self.gray[y:y + h, x:x + w]
-                b = alpha * self.frame_in[y:y + h, x:x + w, 2]
-                frame_out = cv2.merge([r,g,b])
-
-            else:
-                fs = 60 
-                sos = signal.butter(3, (1, 3.0), 'bp', fs=60, output='sos')
-                filtered = signal.sosfilt(sos, subframes, axis=0)
-                alpha = 80
-                filtered = filtered * alpha
-                # Reconstruct Resulting Frame
-                filtered = self.rebuildSubframe(filtered, self.levels)
-                x, y, w, h = self.get_subface_coord(*(self.forehead_coords))
-                frame_out = self.frame_in[y:y + h, x:x + w, :] + filtered
-
-
-            # Insert new forehead colors
-            self.frame_out[y:y + h, x:x + w] = frame_out
             x1, y1, w1, h1 = self.face_rect
             self.slices = [np.copy(self.frame_out[y1:y1 + h1, x1:x1 + w1, 1])]
 

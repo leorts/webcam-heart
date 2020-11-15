@@ -76,7 +76,7 @@ class getPulseApp(object):
         self.key_controls = {"s": self.toggle_search,
                              "d": self.toggle_display_plot,
                              "c": self.toggle_cam,
-                             "x": self.toggle_method,
+                             "x": self.toggle_color_ch,
                              "f": self.write_csv}
 
     def toggle_cam(self):
@@ -122,12 +122,12 @@ class getPulseApp(object):
             self.make_bpm_plot()
             moveWindow(self.plot_title, self.w, 0)
 
-    def toggle_method(self):
+    def toggle_color_ch(self):
         """
-        Toggles what method is used.
+        Toggles what color channel is used to calculate BPM.
         """
-        method = self.processor.method_toggle()   
-        print("method used = " + method)    
+        color_ch = self.processor.color_ch_toggle()   
+        print("Color channel used = " + color_ch)    
 
     def make_bpm_plot(self):
         """
