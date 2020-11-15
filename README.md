@@ -1,4 +1,4 @@
-![Alt text](http://i.imgur.com/2ngZopS.jpg "Screenshot")
+![Alt text](https://i.imgur.com/HOmmTmE.png "Screenshot")
 
 webcam-heart
 -----------------------
