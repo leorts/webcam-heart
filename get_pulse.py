@@ -77,6 +77,7 @@ class getPulseApp(object):
                              "d": self.toggle_display_plot,
                              "c": self.toggle_cam,
                              "x": self.toggle_color_ch,
+                             "z": self.toggle_measuring_area,
                              "f": self.write_csv}
 
     def toggle_cam(self):
@@ -128,6 +129,13 @@ class getPulseApp(object):
         """
         color_ch = self.processor.color_ch_toggle()   
         print("Color channel used = " + color_ch)    
+
+    def toggle_measuring_area(self):
+        """
+        Toggles what measuring area is used to calculate BPM and magnify.
+        """
+        measuring_area = self.processor.measuring_area_toggle()   
+        print("Measuring_area used = " + measuring_area)      
 
     def make_bpm_plot(self):
         """
