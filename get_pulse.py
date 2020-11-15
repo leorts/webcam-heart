@@ -76,6 +76,7 @@ class getPulseApp(object):
         self.key_controls = {"s": self.toggle_search,
                              "d": self.toggle_display_plot,
                              "c": self.toggle_cam,
+                             "x": self.toggle_method,
                              "f": self.write_csv}
 
     def toggle_cam(self):
@@ -120,6 +121,13 @@ class getPulseApp(object):
             self.bpm_plot = True
             self.make_bpm_plot()
             moveWindow(self.plot_title, self.w, 0)
+
+    def toggle_method(self):
+        """
+        Toggles what method is used.
+        """
+        method = self.processor.method_toggle()   
+        print("method used = " + method)    
 
     def make_bpm_plot(self):
         """
