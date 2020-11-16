@@ -178,7 +178,9 @@ class getPulseApp(object):
         Single iteration of the application's main loop.
         """
         # Get current image frame from the camera
+
         frame = self.cameras[self.selected_cam].get_frame()
+        print(frame.shape)
         self.h, self.w, _c = frame.shape
 
         # set current image frame to the processor's input

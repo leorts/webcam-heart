@@ -42,7 +42,9 @@ class getPulseApp(object):
 			self.sock = socket.socket(socket.AF_INET, # Internet
 				 socket.SOCK_DGRAM) # UDP
 
-		vid = cv2.VideoCapture(filename)
+		self.vidcap = cv2.VideoCapture(filename)
+		# if (vidcap.isOpened() == False)
+		# 	print("Error opening video")
 		# Containerized analysis of recieved image frames (an openMDAO assembly)
 		# is defined next.
 
@@ -157,14 +159,16 @@ class getPulseApp(object):
 		"""
 		Single iteration of the application's main loop.
 		"""
-		# Get current image frame from the camera
-		frame = self.cameras[self.selected_cam].get_frame()
+		# Get current image frame from the video 
+		success, frame = self.vidcap.read()
+		#ret, jpeg = cv2.imencode('.jpg', image)
+		#frame = jpeg.tobytes()
 		self.h, self.w, _c = frame.shape
 
 		# set current image frame to the processor's input
 		self.processor.frame_in = frame
 		# process the image frame to perform all needed analysis
-		self.processor.run(self.selected_cam)
+		self.processor.run()
 		# collect the output frame for display
 		output_frame = self.processor.frame_out
 
