@@ -68,7 +68,7 @@ class getPulseApp(object):
                                           face_detector_smoothness=10.)
 
         # Init parameters for the cardiac data plot
-        self.bpm_plot = False
+        self.bpm_plot = True
         self.plot_title = "Data display - raw signal (top) and PSD (bottom)"
 
         # Maps keystrokes to specified methods
@@ -180,7 +180,6 @@ class getPulseApp(object):
         # Get current image frame from the camera
 
         frame = self.cameras[self.selected_cam].get_frame()
-        print(frame.shape)
         self.h, self.w, _c = frame.shape
 
         # set current image frame to the processor's input
