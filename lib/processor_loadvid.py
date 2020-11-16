@@ -351,3 +351,6 @@ class findFaceGetPulse(object):
                 text = "(estimate: %0.1f bpm)" % (self.bpm)
             cv2.putText(self.frame_out, text,
                        (10, 150), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1, col)
+
+        
+
