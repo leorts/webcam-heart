@@ -52,6 +52,7 @@ class findFaceGetPulse(object):
         self.find_faces = True 
 
         self.used_color_ch = 0 # default color channel used is g
+        self.used_color_chs = ["g","r","b","rgb"]
         self.measuring_area = 0
 
     def find_faces_toggle(self):
@@ -77,29 +78,13 @@ class findFaceGetPulse(object):
                 int(h * fh_h)]
 
     def color_ch_toggle(self):
-        if self.used_color_ch == 0:
-            self.used_color_ch = 1
-            used_color_ch = "r"
-        elif self.used_color_ch == 1:
-            self.used_color_ch = 2
-            used_color_ch = "b"
-        elif self.used_color_ch == 2:
-            self.used_color_ch = 3
-            used_color_ch = "rgb"  
-        else: # used_color_ch == 3
-            self.used_color_ch = 0
-            used_color_ch = "g"     
+        self.used_color_ch+=1
+        self.used_color_ch = 0 if self.used_color_ch == 4 else self.used_color_ch
+        used_color_ch = self.used_color_chs[self.used_color_ch]
         return used_color_ch
 
     def get_color_ch(self):
-        if self.used_color_ch == 0:
-            used_color_ch = "g"
-        elif self.used_color_ch == 1:
-            used_color_ch = "r"
-        elif self.used_color_ch == 2:
-            used_color_ch = "b"
-        else: # used_color_ch == 3
-            used_color_ch = "rgb"    
+        used_color_ch = self.used_color_chs[self.used_color_ch]  
         return used_color_ch
 
     def measuring_area_toggle(self):
