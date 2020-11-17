@@ -207,7 +207,7 @@ class findFaceGetPulse(object):
                        (10, 125), cv2.FONT_HERSHEY_COMPLEX_SMALL , 1.25, col)
             
 
-            self.mean_buffer, self.g_pyr_forehead_buffer, self.g_pyr_l_cheek_buffer, self.g_pyr_r_cheek_buffer, self.times = [], [], []
+            self.mean_buffer, self.g_pyr_forehead_buffer, self.g_pyr_l_cheek_buffer, self.g_pyr_r_cheek_buffer, self.times = [], [], [], [], []
             detected = list(self.face_cascade.detectMultiScale(self.gray,
                                                                scaleFactor=1.3,
                                                                minNeighbors=4,
