@@ -16,8 +16,7 @@ How it works:
 -----------------
 This application uses [OpenCV](http://opencv.org/) to find the location of the user's face, then isolate the forehead or cheeks. Data is collected
 from this location over time to estimate the user's heart rate. This is done by measuring average optical
-intensity in the forehead location, in the subimage's green channel alone (a better color mixing ratio may exist, but the 
-blue channel tends to be very noisy). Physiological data can be estimated this way thanks to the optical absorption 
+intensity in the forehead or cheeks location in the user's choice of color channel(s). While the subimage's green channel is recommended for general use cases (the blue and red channels tends to be noisier), better color mixing ratio may exist so feel free to try out different ratios. Physiological data can be estimated this way thanks to the optical absorption 
 characteristics of (oxy-) haemoglobin (see http://www.opticsinfobase.org/oe/abstract.cfm?uri=oe-16-26-21434). 
 
 With good lighting and minimal noise due to motion, a stable heartbeat should be 
