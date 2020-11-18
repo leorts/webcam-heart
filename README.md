@@ -3,7 +3,7 @@
 webcam-heart
 -----------------------
 
-This code is adapted from https://github.com/thearn/webcam-pulse-detector, (we replaced the Mayer Wave visualization with Eulerian magnification visualization, added cheeks as a possible measuring area, and implemented some user customization of bpm calculation)
+This code is adapted from https://github.com/thearn/webcam-pulse-detector, (we replaced their BPM calculation with our own, replaced their Mayer Wave visualization with Eulerian magnification visualization, added cheeks as a possible measuring area, and added user customization of the used color channels for bpm calculation)
 
 This code can be run from source by following the instructions below.
 
